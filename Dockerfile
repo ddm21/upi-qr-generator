@@ -9,6 +9,10 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 FROM python:3.12-slim
 WORKDIR /app
 
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash appuser
+USER appuser
+
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
