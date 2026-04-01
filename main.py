@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import io
@@ -9,10 +9,17 @@ app = FastAPI(title="QR Code Generator")
 
 
 class UpiPayload(BaseModel):
+    # Mandatory
     pa: str = Field(..., description="Payee VPA, e.g., NUMBER@ybl")
     pn: str = Field(..., description="Payee name")
-    am: float = Field(..., gt=0, description="Amount")
-    cu: str = Field(..., description="Currency, e.g., INR")
+
+    # Optional
+    am: float | None = Field(
+        None, gt=0, description="Amount (optional; must be >0 if provided)"
+    )
+    cu: str | None = Field(
+        "INR", description="Currency, e.g., INR (optional; defaults to INR)"
+    )
     tn: str | None = Field(None, description="Note (optional)")
     tr: str | None = Field(None, description="Transaction reference (optional)")
 
@@ -31,9 +38,12 @@ def build_upi_url(payload: UpiPayload) -> str:
     params = {
         "pa": payload.pa,
         "pn": payload.pn,
-        "am": f"{payload.am:.2f}",
-        "cu": payload.cu,
     }
+
+    if payload.am is not None:
+        params["am"] = f"{payload.am:.2f}"
+    if payload.cu:
+        params["cu"] = payload.cu
     if payload.tn:
         params["tn"] = payload.tn
     if payload.tr:
@@ -48,8 +58,10 @@ def build_upi_url(payload: UpiPayload) -> str:
 async def generate_qr(
     pa: str = Query(..., description="Payee VPA"),
     pn: str = Query(..., description="Payee name"),
-    am: float = Query(..., gt=0, description="Amount"),
-    cu: str = Query(..., description="Currency (INR)"),
+    am: float | None = Query(None, gt=0, description="Amount (optional)"),
+    cu: str | None = Query(
+        "INR", description="Currency (optional; defaults to INR when omitted)"
+    ),
     tn: str | None = Query(None, description="Transaction note"),
     tr: str | None = Query(None, description="Transaction reference"),
 ):
@@ -81,5 +93,5 @@ async def generate_qr_from_upi(payload: UpiPayload):
 @app.get("/")
 async def root():
     return {
-        "message": "UPI-only: GET /qr with pa,pn,am,cu,tn?,tr? or POST /qr with the same JSON to get a QR code PNG."
+        "message": "UPI-only: GET /qr with pa,pn required; am?,cu?,tn?,tr? optional (or POST /qr with the same JSON) to get a QR code PNG."
     }
