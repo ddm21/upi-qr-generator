@@ -9,7 +9,7 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 ## Use (UPI only)
 - GET (query params):
   ```
-  http://localhost:8000/qr?pa=NUMBER@ybl&pn=Dhruv&am=340.00&cu=INR&tn=Test%20Payment&tr=INV-0042
+  http://localhost:8000/qr?pa=foobar@upi&pn=Dhruv&am=340.00&cu=INR&tn=Test%20Payment&tr=INV-0042
   ```
 - POST (JSON body builds UPI link for you):
   ```
@@ -17,7 +17,7 @@ FastAPI service that returns a PNG QR code for UPI payment links.
     -H "Content-Type: application/json" \
     -o qr.png \
     -d '{
-          "pa": "NUMBER@ybl",
+          "pa": "foobar@upi",
           "pn": "Dhruv",
           "am": 340.00,
           "cu": "INR",
@@ -25,6 +25,7 @@ FastAPI service that returns a PNG QR code for UPI payment links.
           "tr": "INV-0042"
         }'
   ```
+Note: Use your full UPI ID (e.g., `name@upi`), not just a phone number handle; some apps reject bare numbers.
 
 ## Endpoints
 - `GET /qr?pa=...&pn=...&am=...&cu=...&tn=...&tr=...` -> PNG QR (UPI only)
@@ -33,7 +34,7 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 ## UPI fields
 | Parameter | Full Name | Description |
 |---|---|---|
-| `pa` | Payee Address | The recipient's UPI ID (VPA). Example: `9876543210@ybl` |
+| `pa` | Payee Address | The recipient's UPI ID (VPA). Example: `foobar@upi` |
 | `pn` | Payee Name | Display name shown to the payer in their UPI app |
 | `am` | Amount | Payment amount in decimal format. Example: `340.00`. If omitted, payer enters it manually |
 | `cu` | Currency | Currency code. Always `INR` for Indian payments |
