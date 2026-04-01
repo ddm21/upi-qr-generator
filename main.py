@@ -298,8 +298,8 @@ async def ui():
                   <input id="am" name="am" type="number" min="0" step="0.01" placeholder="499.00" />
                 </div>
                 <div>
-                  <label for="cu">Currency (defaults to INR)</label>
-                  <input id="cu" name="cu" placeholder="INR" />
+                  <label for="cu">Currency (fixed to INR)</label>
+                  <input id="cu" name="cu" value="INR" disabled />
                 </div>
               </div>
 
@@ -336,23 +336,29 @@ async def ui():
         const qr = document.getElementById('qr');
         const downloadLink = document.getElementById('download');
         const placeholder = document.getElementById('placeholder');
+        const currencyInput = document.getElementById('cu');
+        const CURRENCY_DEFAULT = 'INR';
+        currencyInput.value = CURRENCY_DEFAULT;
 
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           result.hidden = true;
           qr.hidden = true;
           placeholder.hidden = false;
+          placeholder.style.display = 'grid';
           downloadLink.setAttribute('aria-disabled', 'true');
           downloadLink.removeAttribute('href');
 
           const data = new FormData(form);
           const params = new URLSearchParams();
-          ['pa','pn','am','cu','tn','tr'].forEach((key) => {
+          ['pa','pn','am','tn','tr'].forEach((key) => {
             const value = data.get(key);
             if (value && String(value).trim() !== '') {
               params.append(key, value.trim());
             }
           });
+          // Always force INR currency
+          params.append('cu', CURRENCY_DEFAULT);
 
           if (!params.get('pa') || !params.get('pn')) {
             alert('Payee VPA and Payee Name are required.');
@@ -374,6 +380,7 @@ async def ui():
             qr.src = url;
             qr.hidden = false;
             placeholder.hidden = true;
+            placeholder.style.display = 'none';
 
             const upiUrl = 'upi://pay?' + params.toString();
             result.textContent = upiUrl;
