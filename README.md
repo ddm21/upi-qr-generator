@@ -27,8 +27,8 @@ FastAPI service that returns a PNG QR code for UPI payment links.
   ```
 
 ## Endpoints
-- `GET /qr?pa=...&pn=...&am=...&cu=...&tn=...&tr=...` → PNG QR (UPI only)
-- `POST /qr` with JSON `{pa, pn, am, cu, tn?, tr?}` → PNG QR (UPI only)
+- `GET /qr?pa=...&pn=...&am=...&cu=...&tn=...&tr=...` -> PNG QR (UPI only)
+- `POST /qr` with JSON `{pa, pn, am, cu, tn?, tr?}` -> PNG QR (UPI only)
 
 ## UPI fields
 | Parameter | Full Name | Description |
@@ -41,3 +41,4 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 | `tr` | Transaction Reference | Your internal reference ID, great for linking to invoice numbers. Example: `INV-0042` |
 
 `pa` and `pn` are mandatory. Everything else is optional.
+
