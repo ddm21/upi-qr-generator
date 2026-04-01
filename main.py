@@ -267,10 +267,9 @@ async def ui():
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 10px;
+          gap: 6px;
           margin-top: 6px;
           color: #2b324f;
-          font-weight: 700;
         }
         .upi-row img { height: 24px; }
       </style>
@@ -319,7 +318,6 @@ async def ui():
               <div id="placeholder" class="placeholder">QR will appear here</div>
               <img id="qr" alt="QR code" hidden />
               <div class="upi-row">
-                <span>UPI</span>
                 <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" alt="UPI logo" />
               </div>
             </div>
@@ -338,7 +336,78 @@ async def ui():
         const placeholder = document.getElementById('placeholder');
         const currencyInput = document.getElementById('cu');
         const CURRENCY_DEFAULT = 'INR';
+        const LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg';
+        let cachedLogoDataUrl = null;
         currencyInput.value = CURRENCY_DEFAULT;
+
+        function blobToDataURL(blob) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+
+        async function loadLogoDataUrl() {
+          if (cachedLogoDataUrl) return cachedLogoDataUrl;
+          const res = await fetch(LOGO_URL);
+          const blob = await res.blob();
+          cachedLogoDataUrl = await blobToDataURL(blob);
+          return cachedLogoDataUrl;
+        }
+
+        async function composeWithLogo(qrUrl, vpaText) {
+          return new Promise((resolve, reject) => {
+            const qrImg = new Image();
+            const logo = new Image();
+            qrImg.crossOrigin = 'anonymous';
+            logo.crossOrigin = 'anonymous';
+            let loaded = 0;
+            const finish = () => {
+              if (loaded === 2) {
+                const padding = 18;
+                const logoPadding = 16;
+                const logoWidth = Math.min(logo.width || 120, qrImg.width * 0.375); // 25% smaller than before
+                const logoHeight = logoWidth * (logo.height / logo.width || 0.25);
+                const text = vpaText || '';
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.font = '15px \"Space Grotesk\", system-ui, sans-serif';
+                const textWidth = text ? tempCtx.measureText(text).width : 0;
+                const textHeight = text ? 18 : 0;
+                const textGap = text ? 16 : 0; // extra breathing room under logo
+                const width = Math.max(qrImg.width + padding * 2, textWidth + padding * 2, logoWidth + padding * 2);
+                const height = qrImg.height + padding * 2 + logoHeight + logoPadding + textGap + textHeight;
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                const qrX = (width - qrImg.width) / 2;
+                ctx.drawImage(qrImg, qrX, padding);
+                const lx = (width - logoWidth) / 2;
+                const ly = qrImg.height + padding * 2 + logoPadding / 2;
+                ctx.drawImage(logo, lx, ly, logoWidth, logoHeight);
+                if (text) {
+                  ctx.fillStyle = '#1f2c4d';
+                  ctx.textAlign = 'center';
+                  ctx.font = '15px \"Space Grotesk\", system-ui, sans-serif';
+                  ctx.fillText(text, width / 2, ly + logoHeight + textGap + textHeight / 2);
+                }
+                resolve(canvas.toDataURL('image/png'));
+              }
+            };
+            qrImg.onload = () => { loaded += 1; finish(); };
+            logo.onload = () => { loaded += 1; finish(); };
+            qrImg.onerror = logo.onerror = (e) => reject(e);
+            qrImg.src = qrUrl;
+            loadLogoDataUrl()
+              .then((dataUrl) => { logo.src = dataUrl; })
+              .catch(reject);
+          });
+        }
 
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
@@ -386,7 +455,14 @@ async def ui():
             result.textContent = upiUrl;
             result.hidden = false;
 
-            downloadLink.href = url;
+            // Compose QR + UPI logo for download
+            try {
+              const composite = await composeWithLogo(url, params.get('pa'));
+              downloadLink.href = composite;
+            } catch (err) {
+              console.warn('Logo compose failed, fallback to raw QR', err);
+              downloadLink.href = url;
+            }
             downloadLink.setAttribute('aria-disabled', 'false');
           } catch (err) {
             alert('Error: ' + err.message);
