@@ -7,6 +7,8 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 - Docker: `docker compose up --build`
 
 ## Use (UPI only)
+- Web UI (no storage): open `http://localhost:8000/ui`, fill the form, click **Generate QR**, then **Download PNG**.
+
 - GET (query params):
   ```
   http://localhost:8000/qr?pa=foobar@upi&pn=Dhruv&am=340.00&cu=INR&tn=Test%20Payment&tr=INV-0042
@@ -28,16 +30,17 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 Note: Use your full UPI ID (e.g., `name@upi`), not just a phone number handle; some apps reject bare numbers.
 
 ## Endpoints
+- `GET /ui` -> simple HTML form to generate & download the PNG QR (no data is stored)
 - `GET /qr?pa=...&pn=...&am=...&cu=...&tn=...&tr=...` -> PNG QR (UPI only)
-- `POST /qr` with JSON `{pa, pn, am, cu, tn?, tr?}` -> PNG QR (UPI only)
+- `POST /qr` with JSON `{pa, pn, am?, cu?, tn?, tr?}` -> PNG QR (UPI only)
 
 ## UPI fields
 | Parameter | Full Name | Description |
 |---|---|---|
 | `pa` | Payee Address | The recipient's UPI ID (VPA). Example: `foobar@upi` |
 | `pn` | Payee Name | Display name shown to the payer in their UPI app |
-| `am` | Amount | Payment amount in decimal format. Example: `340.00`. If omitted, payer enters it manually |
-| `cu` | Currency | Currency code. Always `INR` for Indian payments |
+| `am` | Amount | Optional decimal amount. Example: `340.00`. If omitted, payer enters it manually |
+| `cu` | Currency | Optional; defaults to `INR` |
 | `tn` | Transaction Note | Short description shown to the payer. Example: `Monthly Retainer` |
 | `tr` | Transaction Reference | Your internal reference ID, great for linking to invoice numbers. Example: `INV-0042` |
 
