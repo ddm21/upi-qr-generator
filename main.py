@@ -229,6 +229,7 @@ async def ui():
         #qr {
           display: block;
           margin: 10px auto 8px;
+          width: min(78vw, 280px);
           max-width: 280px;
           background: white;
           padding: 12px;
@@ -236,8 +237,8 @@ async def ui():
           box-shadow: 0 10px 32px rgba(21, 32, 75, 0.15);
         }
         .placeholder {
-          width: 220px;
-          height: 220px;
+          width: min(78vw, 240px);
+          height: min(78vw, 240px);
           border-radius: 16px;
           margin: 10px auto 8px;
           background: repeating-linear-gradient(135deg, #e3e9ff, #e3e9ff 12px, #f2f5ff 12px, #f2f5ff 24px);
@@ -272,6 +273,19 @@ async def ui():
           color: #2b324f;
         }
         .upi-row img { height: 24px; }
+        @media (max-width: 640px) {
+          body { padding: 16px; }
+          header { padding: 18px 18px 10px; }
+          h1 { font-size: 22px; }
+          .grid { padding: 16px 18px 20px; gap: 12px; }
+          .panel { padding: 14px; }
+          .row { grid-template-columns: 1fr; }
+          .preview-card { padding: 12px; }
+          #qr { width: min(82vw, 240px); padding: 10px; }
+          .placeholder { width: min(82vw, 220px); height: min(82vw, 220px); }
+          .download-link { width: 100%; }
+          .chip { font-size: 12px; padding: 7px 10px; }
+        }
       </style>
     </head>
     <body>
@@ -283,7 +297,7 @@ async def ui():
 
         <div class="grid">
           <div class="panel">
-            <div class="chip">Payment · UPI</div>
+            <div class="chip">Payment | UPI</div>
             <form id="upi-form">
               <label for="pa">Payee VPA *</label>
               <input id="pa" name="pa" placeholder="number@ybl" required />
@@ -475,3 +489,4 @@ async def ui():
     </body>
     </html>
     """
+
