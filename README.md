@@ -8,11 +8,13 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 
 ## Use (UPI only)
 - Web UI (no storage): open `http://localhost:8000/ui`, fill the form, click **Generate QR**, then **Download PNG**.
+  - The UI adds the UPI logo under the QR automatically.
 
 - GET (query params):
   ```
-  http://localhost:8000/qr?pa=foobar@upi&pn=Dhruv&am=340.00&cu=INR&tn=Test%20Payment&tr=INV-0042
+  http://localhost:8000/qr?pa=foobar@upi&pn=Dhruv&am=340.00&cu=INR&tn=Test%20Payment&tr=INV-0042&logo=true
   ```
+  - `logo` (optional, default false): include the UPI logo beneath the QR.
 - POST (JSON body builds UPI link for you):
   ```
   curl -X POST http://localhost:8000/qr \
@@ -24,7 +26,8 @@ FastAPI service that returns a PNG QR code for UPI payment links.
           "am": 340.00,
           "cu": "INR",
           "tn": "Test Payment",
-          "tr": "INV-0042"
+          "tr": "INV-0042",
+          "logo": true
         }'
   ```
 Note: Use your full UPI ID (e.g., `name@upi`), not just a phone number handle; some apps reject bare numbers.
@@ -43,6 +46,7 @@ Note: Use your full UPI ID (e.g., `name@upi`), not just a phone number handle; s
 | `cu` | Currency | Optional; defaults to `INR` |
 | `tn` | Transaction Note | Short description shown to the payer. Example: `Monthly Retainer` |
 | `tr` | Transaction Reference | Your internal reference ID, great for linking to invoice numbers. Example: `INV-0042` |
+| `logo` | Logo under QR | `true` to draw the UPI logo under the QR; defaults to `false` |
 
 `pa` and `pn` are mandatory. Everything else is optional.
 

@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field
 import io
 import qrcode
 from urllib.parse import urlencode, quote
+from typing import Optional
+from urllib.request import urlopen
+from PIL import Image
 
 app = FastAPI(title="QR Code Generator")
 
@@ -22,11 +25,24 @@ class UpiPayload(BaseModel):
     )
     tn: str | None = Field(None, description="Note (optional)")
     tr: str | None = Field(None, description="Transaction reference (optional)")
+    logo: bool = Field(
+        False,
+        description="Include UPI logo under the QR (optional; defaults to false)",
+    )
+
+
+LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg"
+_cached_logo_rgba: Optional[Image.Image] = None
 
 
 def _qr_response(data: str) -> StreamingResponse:
     """Generate PNG QR code image for the given string."""
     img = qrcode.make(data)
+    return _image_response(img)
+
+
+def _image_response(img: Image.Image) -> StreamingResponse:
+    """Return a PIL image as a PNG StreamingResponse."""
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
@@ -54,6 +70,56 @@ def build_upi_url(payload: UpiPayload) -> str:
     return f"upi://pay?{query}"
 
 
+def _get_logo_image() -> Optional[Image.Image]:
+    """Fetch and cache the UPI logo as an RGBA PIL image."""
+    global _cached_logo_rgba
+    if _cached_logo_rgba is not None:
+        return _cached_logo_rgba
+    try:
+        with urlopen(LOGO_URL) as resp:
+            logo_bytes = resp.read()
+        logo = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
+        _cached_logo_rgba = logo
+        return logo
+    except Exception:
+        return None
+
+
+def _compose_logo(qr_img: Image.Image) -> Image.Image:
+    """
+    Place the UPI logo beneath the QR on a white canvas.
+
+    If logo fetch fails, returns the original QR image.
+    """
+    logo = _get_logo_image()
+    if logo is None:
+        return qr_img
+
+    qr_rgba = qr_img.convert("RGBA")
+    qr_w, qr_h = qr_rgba.size
+
+    target_logo_w = max(80, min(int(qr_w * 0.35), 200))
+    aspect = logo.height / logo.width if logo.width else 0.25
+    target_logo_h = int(target_logo_w * aspect)
+    logo_resized = logo.resize((target_logo_w, target_logo_h), Image.LANCZOS)
+
+    padding = 18
+    gap = 16
+    canvas_w = qr_w + padding * 2
+    canvas_h = qr_h + padding * 2 + gap + target_logo_h
+
+    canvas = Image.new("RGBA", (canvas_w, canvas_h), (255, 255, 255, 255))
+    qr_x = (canvas_w - qr_w) // 2
+    qr_y = padding
+    canvas.paste(qr_rgba, (qr_x, qr_y))
+
+    logo_x = (canvas_w - target_logo_w) // 2
+    logo_y = qr_y + qr_h + gap
+    canvas.paste(logo_resized, (logo_x, logo_y), logo_resized)
+
+    return canvas.convert("RGB")
+
+
 @app.get("/qr")
 async def generate_qr(
     pa: str = Query(..., description="Payee VPA"),
@@ -64,11 +130,17 @@ async def generate_qr(
     ),
     tn: str | None = Query(None, description="Transaction note"),
     tr: str | None = Query(None, description="Transaction reference"),
+    logo: bool = Query(
+        False, description="Include UPI logo under the QR (optional; defaults to false)"
+    ),
 ):
     """Generate a UPI QR via query parameters (UPI-only)."""
-    payload = UpiPayload(pa=pa, pn=pn, am=am, cu=cu, tn=tn, tr=tr)
+    payload = UpiPayload(pa=pa, pn=pn, am=am, cu=cu, tn=tn, tr=tr, logo=logo)
     upi_url = build_upi_url(payload)
-    return _qr_response(upi_url)
+    img = qrcode.make(upi_url)
+    if logo:
+        img = _compose_logo(img)
+    return _image_response(img)
 
 
 @app.post("/qr")
@@ -87,7 +159,10 @@ async def generate_qr_from_upi(payload: UpiPayload):
     }
     """
     upi_url = build_upi_url(payload)
-    return _qr_response(upi_url)
+    img = qrcode.make(upi_url)
+    if payload.logo:
+        img = _compose_logo(img)
+    return _image_response(img)
 
 
 @app.get("/")
