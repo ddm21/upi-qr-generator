@@ -435,6 +435,20 @@ async def ui():
         let cachedLogoDataUrl = null;
         currencyInput.value = CURRENCY_DEFAULT;
 
+        // Show QR only after it actually loads; keep placeholder if load fails
+        qr.onload = () => {
+          qr.hidden = false;
+          placeholder.hidden = true;
+          placeholder.style.display = 'none';
+        };
+        qr.onerror = () => {
+          qr.hidden = true;
+          placeholder.hidden = false;
+          placeholder.style.display = 'grid';
+          downloadLink.setAttribute('aria-disabled', 'true');
+          downloadLink.removeAttribute('href');
+        };
+
         function blobToDataURL(blob) {
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -510,6 +524,7 @@ async def ui():
           qr.hidden = true;
           placeholder.hidden = false;
           placeholder.style.display = 'grid';
+          qr.src = '';
           downloadLink.setAttribute('aria-disabled', 'true');
           downloadLink.removeAttribute('href');
 
@@ -542,9 +557,6 @@ async def ui():
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             qr.src = url;
-            qr.hidden = false;
-            placeholder.hidden = true;
-            placeholder.style.display = 'none';
 
             const upiUrl = 'upi://pay?' + params.toString();
             result.textContent = upiUrl;
