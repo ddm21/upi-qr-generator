@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Query
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
 import io
 import qrcode
 from urllib.parse import urlencode, quote
 from typing import Optional
-from urllib.request import urlopen
+from pathlib import Path
 from PIL import Image
 
 app = FastAPI(title="QR Code Generator")
@@ -31,7 +31,8 @@ class UpiPayload(BaseModel):
     )
 
 
-LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg"
+BASE_DIR = Path(__file__).parent
+LOGO_PATH = BASE_DIR / "assets" / "upi-logo.png"
 _cached_logo_rgba: Optional[Image.Image] = None
 
 
@@ -71,13 +72,12 @@ def build_upi_url(payload: UpiPayload) -> str:
 
 
 def _get_logo_image() -> Optional[Image.Image]:
-    """Fetch and cache the UPI logo as an RGBA PIL image."""
+    """Load and cache the bundled UPI logo as an RGBA PIL image."""
     global _cached_logo_rgba
     if _cached_logo_rgba is not None:
         return _cached_logo_rgba
     try:
-        with urlopen(LOGO_URL) as resp:
-            logo_bytes = resp.read()
+        logo_bytes = LOGO_PATH.read_bytes()
         logo = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
         _cached_logo_rgba = logo
         return logo
@@ -170,6 +170,12 @@ async def root():
     return {
         "message": "UPI-only: GET /qr with pa,pn required; am?,cu?,tn?,tr? optional (or POST /qr with the same JSON) to get a QR code PNG."
     }
+
+
+@app.get("/logo.png")
+async def logo_file():
+    """Serve the bundled UPI logo used by the UI and API overlays."""
+    return FileResponse(LOGO_PATH, media_type="image/png")
 
 
 @app.get("/ui", response_class=HTMLResponse)
@@ -407,7 +413,7 @@ async def ui():
               <div id="placeholder" class="placeholder">QR will appear here</div>
               <img id="qr" alt="QR code" hidden />
               <div class="upi-row">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" alt="UPI logo" />
+                <img src="/logo.png" alt="UPI logo" />
               </div>
             </div>
             <div id="result" hidden></div>
@@ -425,7 +431,7 @@ async def ui():
         const placeholder = document.getElementById('placeholder');
         const currencyInput = document.getElementById('cu');
         const CURRENCY_DEFAULT = 'INR';
-        const LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg';
+        const LOGO_URL = '/logo.png';
         let cachedLogoDataUrl = null;
         currencyInput.value = CURRENCY_DEFAULT;
 

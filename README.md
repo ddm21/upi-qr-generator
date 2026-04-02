@@ -8,13 +8,13 @@ FastAPI service that returns a PNG QR code for UPI payment links.
 
 ## Use (UPI only)
 - Web UI (no storage): open `http://localhost:8000/ui`, fill the form, click **Generate QR**, then **Download PNG**.
-  - The UI adds the UPI logo under the QR automatically.
+  - The UI adds the bundled UPI logo under the QR automatically (served locally from `/logo.png`, no external fetch).
 
 - GET (query params):
   ```
   http://localhost:8000/qr?pa=foobar@upi&pn=Dhruv&am=340.00&cu=INR&tn=Test%20Payment&tr=INV-0042&logo=true
   ```
-  - `logo` (optional, default false): include the UPI logo beneath the QR.
+  - `logo` (optional, default false): include the bundled UPI logo beneath the QR.
 - POST (JSON body builds UPI link for you):
   ```
   curl -X POST http://localhost:8000/qr \
